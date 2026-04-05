@@ -1,0 +1,686 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Memora AI</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Instrument+Serif:ital@0;1&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #f8f1df;
+        --card: #fff7ea;
+        --ink: #1e2930;
+        --muted: #5f6d73;
+        --accent: #e05f2c;
+        --accent-2: #176087;
+        --ok: #1f7a46;
+        --border: #d9c7a8;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        color: var(--ink);
+        font-family: "Space Grotesk", sans-serif;
+        background:
+          radial-gradient(circle at 15% 20%, #ffd8a8 0%, transparent 30%),
+          radial-gradient(circle at 90% 10%, #9fd4f2 0%, transparent 30%),
+          linear-gradient(180deg, #f8f1df 0%, #f3e7d1 100%);
+        min-height: 100vh;
+      }
+
+      .wrap {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 24px;
+      }
+
+      .hero {
+        margin-bottom: 18px;
+        animation: rise 450ms ease;
+      }
+
+      .title {
+        margin: 0;
+        font-family: "Instrument Serif", serif;
+        font-size: clamp(2rem, 4vw, 3.3rem);
+        line-height: 1.05;
+      }
+
+      .subtitle {
+        margin: 8px 0 0;
+        color: var(--muted);
+        max-width: 74ch;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: 360px 1fr;
+        gap: 16px;
+      }
+
+      .card {
+        background: color-mix(in srgb, var(--card) 90%, #ffffff 10%);
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        padding: 16px;
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.06);
+      }
+
+      h2 {
+        margin-top: 0;
+        font-size: 1.1rem;
+      }
+
+      .section {
+        margin-bottom: 14px;
+      }
+
+      .label {
+        font-size: 0.84rem;
+        color: var(--muted);
+        margin-bottom: 6px;
+        display: block;
+      }
+
+      input[type="text"],
+      textarea {
+        width: 100%;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 10px;
+        font: inherit;
+        background: #fffef9;
+      }
+
+      button {
+        border: 0;
+        border-radius: 12px;
+        padding: 10px 14px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: transform 130ms ease, opacity 130ms ease;
+      }
+
+      button:hover {
+        transform: translateY(-1px);
+      }
+
+      .btn-primary {
+        background: var(--accent);
+        color: #fff;
+      }
+
+      .btn-secondary {
+        background: var(--accent-2);
+        color: #fff;
+      }
+
+      .status {
+        min-height: 24px;
+        font-size: 0.88rem;
+        color: var(--ok);
+      }
+
+      .chat-log {
+        height: 60vh;
+        overflow: auto;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 12px;
+        background: #fffef9;
+      }
+
+      .msg {
+        padding: 10px 12px;
+        border-radius: 10px;
+        margin-bottom: 10px;
+        white-space: pre-wrap;
+      }
+
+      .msg.user {
+        background: #d8eef9;
+      }
+
+      .msg.assistant {
+        background: #ffe8cf;
+      }
+
+      .cite {
+        font-size: 0.8rem;
+        color: var(--muted);
+        margin-top: 6px;
+      }
+
+      .warning-banner {
+        background: #fff8e1;
+        border: 1px solid #ffd700;
+        border-radius: 10px;
+        padding: 10px 12px;
+        margin-top: 8px;
+        font-size: 0.85rem;
+        color: #8b6f00;
+        display: flex;
+        gap: 8px;
+        align-items: flex-start;
+      }
+
+      .warning-banner::before {
+        content: "⚠️";
+        flex-shrink: 0;
+      }
+
+      .refinement-suggestions {
+        background: #f0f8ff;
+        border-left: 3px solid #176087;
+        border-radius: 8px;
+        padding: 10px 12px;
+        margin-top: 8px;
+        font-size: 0.82rem;
+      }
+
+      .refinement-suggestions strong {
+        color: #176087;
+        display: block;
+        margin-bottom: 6px;
+      }
+
+      .refinement-suggestions ul {
+        margin: 0;
+        padding-left: 18px;
+        color: #4a6fa5;
+      }
+
+      .refinement-suggestions li {
+        margin-bottom: 4px;
+      }
+
+      .insights-modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 1000;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .insights-modal.show {
+        display: flex;
+      }
+
+      .insights-panel {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        padding: 24px;
+        max-width: 700px;
+        max-height: 80vh;
+        overflow-y: auto;
+        box-shadow: 0 16px 60px rgba(0, 0, 0, 0.15);
+      }
+
+      .insights-panel h3 {
+        margin-top: 0;
+        margin-bottom: 16px;
+        font-size: 1.3rem;
+        color: var(--ink);
+      }
+
+      .insight-section {
+        margin-bottom: 20px;
+      }
+
+      .insight-section h4 {
+        margin: 0 0 8px;
+        font-size: 0.95rem;
+        color: var(--accent);
+      }
+
+      .topic-item {
+        background: #f9f9f9;
+        padding: 8px 10px;
+        border-radius: 8px;
+        margin-bottom: 6px;
+        font-size: 0.85rem;
+      }
+
+      .contradiction-item {
+        background: #ffe8e8;
+        padding: 8px 10px;
+        border-radius: 8px;
+        margin-bottom: 6px;
+        font-size: 0.82rem;
+        border-left: 3px solid #e05f2c;
+      }
+
+      .gap-item {
+        background: #e8f5e9;
+        padding: 8px 10px;
+        border-radius: 8px;
+        margin-bottom: 6px;
+        font-size: 0.82rem;
+        border-left: 3px solid #1f7a46;
+      }
+
+      .insights-close {
+        float: right;
+        font-size: 1.5rem;
+        cursor: pointer;
+        color: var(--muted);
+      }
+
+      .insights-close:hover {
+        color: var(--ink);
+      }
+
+      .filter-group {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin-bottom: 8px;
+        font-size: 0.85rem;
+      }
+
+      .checkbox-group {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-top: 4px;
+      }
+
+      .checkbox-group label {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 0.8rem;
+        cursor: pointer;
+      }
+
+      .checkbox-group input[type="checkbox"] {
+        cursor: pointer;
+      }
+
+      .sources {
+        max-height: 220px;
+        overflow: auto;
+        font-size: 0.86rem;
+        border: 1px dashed var(--border);
+        border-radius: 12px;
+        padding: 8px;
+      }
+
+      @keyframes rise {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @media (max-width: 920px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+
+        .chat-log {
+          height: 48vh;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header class="hero">
+        <h1 class="title">Memora AI</h1>
+        <p class="subtitle">
+          Ingest notes, documents, and emails into a private knowledge base. Ask questions and get context-grounded answers with citations.
+        </p>
+      </header>
+
+      <main class="grid">
+        <aside class="card">
+          <div class="section">
+            <h2>Ingest Data</h2>
+            <label class="label" for="folderPath">Folder Path (server local path)</label>
+            <input id="folderPath" type="text" placeholder="/Users/you/Documents" />
+            <div style="margin-top: 8px; display: flex; gap: 8px;">
+              <button class="btn-secondary" id="ingestFolderBtn">Ingest Folder</button>
+            </div>
+          </div>
+
+          <div class="section">
+            <label class="label" for="fileInput">Upload Files (txt, md, pdf, docx, eml, mbox)</label>
+            <input id="fileInput" type="file" multiple />
+            <div style="margin-top: 8px;">
+              <button class="btn-secondary" id="uploadBtn">Upload + Ingest</button>
+            </div>
+          </div>
+
+          <div class="status" id="status"></div>
+
+          <div class="section">
+            <h2>Indexed Sources</h2>
+            <div class="sources" id="sources"></div>
+          </div>
+        </aside>
+
+        <section class="card">
+          <h2>Chat</h2>
+          <div style="margin-bottom: 12px; padding: 10px; background: #f3e7d1; border-radius: 8px;">
+            <button id="filterToggle" style="background: none; border: none; color: var(--muted); font-size: 0.9rem; cursor: pointer; padding: 0; text-align: left; width: 100%;">▶ Advanced Filters</button>
+            <div id="filterPanel" style="display: none; margin-top: 8px;">
+              <div class="filter-group">
+                <div>
+                  <label class="label">Start Date</label>
+                  <input id="startDate" type="date" style="width: 100%;" />
+                </div>
+                <div>
+                  <label class="label">End Date</label>
+                  <input id="endDate" type="date" style="width: 100%;" />
+                </div>
+              </div>
+              <div>
+                <label class="label">Trust Levels</label>
+                <div class="checkbox-group">
+                  <label><input id="trustHigh" type="checkbox" value="high" checked /> High</label>
+                  <label><input id="trustMedium" type="checkbox" value="medium" checked /> Medium</label>
+                  <label><input id="trustLow" type="checkbox" value="low" /> Low</label>
+                </div>
+              </div>
+              <div style="margin-top: 8px;">
+                <label class="label">Source Types</label>
+                <div class="checkbox-group">
+                  <label><input id="typePersonal" type="checkbox" value="personal_note" checked /> Personal Notes</label>
+                  <label><input id="typeEmail" type="checkbox" value="email" checked /> Emails</label>
+                  <label><input id="typeDocument" type="checkbox" value="document" checked /> Documents</label>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="chat-log" id="chatLog"></div>
+          <div style="display: grid; grid-template-columns: 1fr auto auto; gap: 8px; margin-top: 10px;">
+            <textarea id="question" rows="3" placeholder="What were the key takeaways from the system design material I read last month?"></textarea>
+            <div>
+              <button class="btn-primary" id="askBtn">Ask</button>
+              <button class="btn-secondary" id="insightsBtn" style="width: 100%; margin-top: 8px;">📊 Insights</button>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <div class="insights-modal" id="insightsModal">
+        <div class="insights-panel">
+          <span class="insights-close" id="insightsClose">&times;</span>
+          <h3>📊 Weekly Insights</h3>
+          <div id="insightsContent" style="color: var(--muted);">Loading...</div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const statusEl = document.getElementById("status");
+      const sourcesEl = document.getElementById("sources");
+      const chatLog = document.getElementById("chatLog");
+
+      function setStatus(msg, isError = false) {
+        statusEl.textContent = msg;
+        statusEl.style.color = isError ? "#8d1a1a" : "#1f7a46";
+      }
+
+      function addMessage(role, text, citations = [], confidence = null, hallucination_warning = null, refinement_suggestions = []) {
+        const div = document.createElement("div");
+        div.className = `msg ${role}`;
+        div.textContent = text;
+
+        if (confidence && role === "assistant") {
+          const confidenceEl = document.createElement("div");
+          confidenceEl.className = "cite";
+          confidenceEl.textContent = `Confidence: ${confidence.label} (${Math.round(confidence.score * 100)}%)`;
+          div.appendChild(confidenceEl);
+        }
+
+        if (citations.length) {
+          const cite = document.createElement("div");
+          cite.className = "cite";
+          cite.textContent = "Citations: " + citations.map((c) => `${c.title} [chunk ${c.chunk_index}]`).join(" | ");
+          div.appendChild(cite);
+        }
+
+        if (hallucination_warning) {
+          const warningEl = document.createElement("div");
+          warningEl.className = "warning-banner";
+          warningEl.textContent = hallucination_warning;
+          div.appendChild(warningEl);
+        }
+
+        if (refinement_suggestions && refinement_suggestions.length > 0) {
+          const suggestionsEl = document.createElement("div");
+          suggestionsEl.className = "refinement-suggestions";
+          suggestionsEl.innerHTML = "<strong>Try:</strong><ul>" +
+            refinement_suggestions.map(s => `<li>${s}</li>`).join("") +
+            "</ul>";
+          div.appendChild(suggestionsEl);
+        }
+
+        chatLog.appendChild(div);
+        chatLog.scrollTop = chatLog.scrollHeight;
+      }
+
+      async function refreshSources() {
+        const res = await fetch("/api/sources");
+        if (!res.ok) return;
+        const data = await res.json();
+
+        if (!data.length) {
+          sourcesEl.textContent = "No sources indexed yet.";
+          return;
+        }
+
+        sourcesEl.innerHTML = data
+          .map((s) => `<div><strong>${s.title}</strong> <small>(${s.trust_level}/${s.source_type})</small><br/><span>${s.path}</span></div><hr/>`)
+          .join("");
+      }
+
+      document.getElementById("ingestFolderBtn").addEventListener("click", async () => {
+        const folderPath = document.getElementById("folderPath").value.trim();
+        if (!folderPath) {
+          setStatus("Enter a folder path first.", true);
+          return;
+        }
+
+        setStatus("Ingesting folder...");
+        const res = await fetch("/api/ingest/folder", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ folder_path: folderPath, recursive: true }),
+        });
+
+        if (!res.ok) {
+          const msg = await res.text();
+          setStatus(`Ingestion failed: ${msg}`, true);
+          return;
+        }
+
+        const data = await res.json();
+        const ingested = data.filter((r) => r.status === "ingested").length;
+        setStatus(`Done. ${ingested}/${data.length} files ingested.`);
+        refreshSources();
+      });
+
+      document.getElementById("uploadBtn").addEventListener("click", async () => {
+        const files = document.getElementById("fileInput").files;
+        if (!files.length) {
+          setStatus("Choose files to upload.", true);
+          return;
+        }
+
+        const formData = new FormData();
+        for (const file of files) {
+          formData.append("files", file);
+        }
+
+        setStatus("Uploading and ingesting files...");
+        const res = await fetch("/api/ingest/upload", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!res.ok) {
+          const msg = await res.text();
+          setStatus(`Upload failed: ${msg}`, true);
+          return;
+        }
+
+        const data = await res.json();
+        const ingested = data.filter((r) => r.status === "ingested").length;
+        setStatus(`Done. ${ingested}/${data.length} files ingested.`);
+        refreshSources();
+      });
+
+      document.getElementById("filterToggle").addEventListener("click", () => {
+        const panel = document.getElementById("filterPanel");
+        const toggle = document.getElementById("filterToggle");
+        const isOpen = panel.style.display === "flex" || panel.style.display === "block";
+        panel.style.display = isOpen ? "none" : "block";
+        toggle.textContent = (isOpen ? "\u25b6" : "\u25bc") + " Advanced Filters";
+      });
+
+      document.getElementById("askBtn").addEventListener("click", async () => {
+        const questionEl = document.getElementById("question");
+        const q = questionEl.value.trim();
+        if (!q) return;
+
+        addMessage("user", q);
+        questionEl.value = "";
+
+        // Collect filter values
+        const startDate = document.getElementById("startDate").value || null;
+        const endDate = document.getElementById("endDate").value || null;
+        const trustLevels = [
+          document.getElementById("trustHigh").checked && "high",
+          document.getElementById("trustMedium").checked && "medium",
+          document.getElementById("trustLow").checked && "low",
+        ].filter(Boolean);
+        const sourceTypes = [
+          document.getElementById("typePersonal").checked && "personal_note",
+          document.getElementById("typeEmail").checked && "email",
+          document.getElementById("typeDocument").checked && "document",
+        ].filter(Boolean);
+
+        const payload = {
+          question: q,
+          start_date: startDate,
+          end_date: endDate,
+          trust_levels: trustLevels.length > 0 ? trustLevels : null,
+          source_types: sourceTypes.length > 0 ? sourceTypes : null,
+        };
+
+        const res = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+
+        if (!res.ok) {
+          addMessage("assistant", "Failed to answer question.");
+          return;
+        }
+
+        const data = await res.json();
+        addMessage("assistant", data.answer, data.citations || [], {
+          score: data.confidence_score || 0,
+          label: data.confidence_label || "low",
+        }, data.hallucination_warning || null, data.refinement_suggestions || []);
+      });
+
+      async function displayWeeklyInsights() {
+        try {
+          const modal = document.getElementById("insightsModal");
+          const content = document.getElementById("insightsContent");
+          content.textContent = "Loading insights...";
+          modal.classList.add("show");
+
+          const res = await fetch("/api/insights/weekly");
+          if (!res.ok) {
+            content.innerHTML = "<p style='color: #8d1a1a;'>Failed to load insights. Try ingesting more data first.</p>";
+            return;
+          }
+
+          const data = await res.json();
+
+          let html = "";
+
+          if (data.topics && data.topics.length > 0) {
+            html += "<div class='insight-section'><h4>🎯 Topics Learned</h4>";
+            data.topics.forEach(t => {
+              html += `<div class='topic-item'><strong>${t.label}</strong> (${t.chunk_count} items)</div>`;
+            });
+            html += "</div>";
+          }
+
+          if (data.contradictions && data.contradictions.length > 0) {
+            html += "<div class='insight-section'><h4>⚡ Contradictions Found</h4>";
+            data.contradictions.forEach(c => {
+              html += `<div class='contradiction-item'>
+                <strong>${c.source_1}</strong> vs <strong>${c.source_2}</strong><br/>
+                <em>"${(c.snippet_1 || "").substring(0, 60)}..." ↔ "${(c.snippet_2 || "").substring(0, 60)}..."</em>
+              </div>`;
+            });
+            html += "</div>";
+          }
+
+          if (data.skill_gaps && data.skill_gaps.length > 0) {
+            html += "<div class='insight-section'><h4>📚 Skill Gaps</h4>";
+            data.skill_gaps.forEach(g => {
+              const q = g.question ? `<strong>Q:</strong> ${g.question.substring(0, 70)}...<br/>` : "";
+              const rec = g.recommendation ? `<strong>Recommendation:</strong> ${g.recommendation}` : "";
+              const insight = g.insight ? `<strong>Insight:</strong> ${g.insight}<br/>` : "";
+              html += `<div class='gap-item'>${q}${insight}${rec}</div>`;
+            });
+            html += "</div>";
+          }
+
+          if (data.summary) {
+            html += "<div class='insight-section'><h4>📝 Summary</h4><p style='font-size: 0.9rem;'>" + data.summary + "</p></div>";
+          }
+
+          if (!html) {
+            html = "<p style='color: var(--muted);'>No insights available yet. Ingest more data and ask questions to generate weekly insights.</p>";
+          }
+
+          content.innerHTML = html;
+        } catch (err) {
+          content.innerHTML = `<p style='color: #8d1a1a;'>Error: ${err.message}</p>`;
+        }
+      }
+
+      document.getElementById("insightsBtn").addEventListener("click", displayWeeklyInsights);
+      document.getElementById("insightsClose").addEventListener("click", () => {
+        document.getElementById("insightsModal").classList.remove("show");
+      });
+      document.getElementById("insightsModal").addEventListener("click", (e) => {
+        if (e.target.id === "insightsModal") {
+          document.getElementById("insightsModal").classList.remove("show");
+        }
+      });
+
+      refreshSources();
+      addMessage("assistant", "Ingest data first, then ask me anything across your personal knowledge.");
+    </script>
+  </body>
+</html>

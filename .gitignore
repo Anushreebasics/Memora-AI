@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.venv/
+venv/
+.env
+
+# Data and local state
+data/
+uploads/
+
+# IDE
+.vscode/
+.DS_Store
+
+# Build/test artifacts
+.pytest_cache/
+.coverage
+htmlcov/
