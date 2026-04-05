@@ -18,12 +18,18 @@
   padding: 0;
 }
 
+html {
+  height: 100%;
+  width: 100%;
+}
+
 body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   background: var(--bg-gradient);
   background-color: var(--bg-color);
   color: var(--text-primary);
-  min-height: 100vh;
+  height: 100%;
+  width: 100%;
   margin: 0;
   -webkit-font-smoothing: antialiased;
 }

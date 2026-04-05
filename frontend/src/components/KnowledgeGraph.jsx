@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ForceGraph2D } from 'react-force-graph';
 import { Network, RefreshCw } from 'lucide-react';
 import { api } from '../api';
 
@@ -14,72 +13,30 @@ function colorForNode(id) {
   return palette[Math.abs(hash) % palette.length];
 }
 
-function toGraphData(triplets) {
-  const nodeMap = new Map();
-  const links = [];
-
-  triplets.forEach((t) => {
-    const source = String(t.subject || '').trim();
-    const target = String(t.object_node || '').trim();
-    const label = String(t.predicate || '').trim() || 'related_to';
-
-    if (!source || !target) return;
-
-    if (!nodeMap.has(source)) {
-      nodeMap.set(source, {
-        id: source,
-        val: 1,
-        degree: 0,
-        color: colorForNode(source),
-      });
-    }
-    if (!nodeMap.has(target)) {
-      nodeMap.set(target, {
-        id: target,
-        val: 1,
-        degree: 0,
-        color: colorForNode(target),
-      });
-    }
-
-    const s = nodeMap.get(source);
-    const d = nodeMap.get(target);
-    s.degree += 1;
-    d.degree += 1;
-
-    links.push({
-      source,
-      target,
-      label,
-      sourceTitle: t.source_title || 'Unknown source',
-      sourcePath: t.source_path || '',
-    });
-  });
-
-  const nodes = Array.from(nodeMap.values()).map((node) => ({
-    ...node,
-    val: Math.max(2, Math.min(14, 2 + Math.log2(node.degree + 1) * 3)),
-  }));
-
-  return { nodes, links };
-}
-
 export default function KnowledgeGraph() {
-  const graphRef = useRef(null);
+  const canvasRef = useRef(null);
   const [triplets, setTriplets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [activeNode, setActiveNode] = useState(null);
-
-  const graphData = useMemo(() => toGraphData(triplets), [triplets]);
+  const [stats, setStats] = useState({ nodes: 0, edges: 0 });
 
   const fetchGraph = async () => {
     setLoading(true);
     setError('');
     try {
-      const data = await api.getGraphTriplets(2500);
-      setTriplets(data.triplets || []);
-    } catch {
+      const data = await api.getGraphTriplets(1000);
+      const tripletsList = data.triplets || [];
+      setTriplets(tripletsList);
+      
+      // Calculate stats
+      const nodeSet = new Set();
+      tripletsList.forEach(t => {
+        if (t.subject) nodeSet.add(t.subject);
+        if (t.object_node) nodeSet.add(t.object_node);
+      });
+      setStats({ nodes: nodeSet.size, edges: tripletsList.length });
+    } catch (err) {
+      console.error('Failed to fetch graph:', err);
       setError('Unable to load graph data from backend.');
     } finally {
       setLoading(false);
@@ -90,20 +47,70 @@ export default function KnowledgeGraph() {
     fetchGraph();
   }, []);
 
-  const stats = useMemo(() => ({
-    nodes: graphData.nodes.length,
-    edges: graphData.links.length,
-  }), [graphData]);
+  useEffect(() => {
+    if (triplets.length === 0 || !canvasRef.current) return;
 
-  const handleNodeClick = (node) => {
-    setActiveNode(node);
-    if (graphRef.current && node) {
-      const distance = 120;
-      const distRatio = 1 + distance / Math.hypot(node.x || 1, node.y || 1);
-      graphRef.current.centerAt((node.x || 0) * distRatio, (node.y || 0) * distRatio, 800);
-      graphRef.current.zoom(2.4, 800);
-    }
-  };
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Simple grid visualization
+    const nodeMap = new Map();
+    const nodes = [];
+    
+    triplets.forEach(t => {
+      if (!nodeMap.has(t.subject)) {
+        nodeMap.set(t.subject, {
+          id: t.subject,
+          x: Math.random() * (canvas.width - 100) + 50,
+          y: Math.random() * (canvas.height - 100) + 50,
+          color: colorForNode(t.subject),
+        });
+        nodes.push(nodeMap.get(t.subject));
+      }
+      if (!nodeMap.has(t.object_node)) {
+        nodeMap.set(t.object_node, {
+          id: t.object_node,
+          x: Math.random() * (canvas.width - 100) + 50,
+          y: Math.random() * (canvas.height - 100) + 50,
+          color: colorForNode(t.object_node),
+        });
+        nodes.push(nodeMap.get(t.object_node));
+      }
+    });
+
+    // Draw
+    ctx.fillStyle = 'rgba(11, 15, 25, 0.8)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Draw edges
+    ctx.strokeStyle = 'rgba(148, 163, 184, 0.3)';
+    ctx.lineWidth = 1;
+    triplets.forEach(t => {
+      const s = nodeMap.get(t.subject);
+      const o = nodeMap.get(t.object_node);
+      if (s && o) {
+        ctx.beginPath();
+        ctx.moveTo(s.x, s.y);
+        ctx.lineTo(o.x, o.y);
+        ctx.stroke();
+      }
+    });
+
+    // Draw nodes
+    nodes.forEach(node => {
+      ctx.fillStyle = node.color;
+      ctx.beginPath();
+      ctx.arc(node.x, node.y, 6, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Draw label
+      ctx.fillStyle = '#e2e8f0';
+      ctx.font = '10px Inter, sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText(node.id.substring(0, 15), node.x + 10, node.y);
+    });
+  }, [triplets]);
 
   return (
     <div className="glass-panel" style={{ padding: '1rem', height: '460px', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
@@ -123,41 +130,12 @@ export default function KnowledgeGraph() {
       </div>
 
       <div style={{ flex: 1, borderRadius: '12px', border: '1px solid var(--panel-border)', overflow: 'hidden', position: 'relative', background: 'radial-gradient(circle at 35% 20%, rgba(56,189,248,0.09), rgba(10,15,25,0.96) 65%)' }}>
-        {!loading && !error && graphData.nodes.length > 0 && (
-          <ForceGraph2D
-            ref={graphRef}
-            graphData={graphData}
-            nodeRelSize={4}
-            cooldownTicks={80}
-            d3VelocityDecay={0.28}
-            linkDirectionalParticles={1}
-            linkDirectionalParticleSpeed={0.0035}
-            linkColor={() => 'rgba(148, 163, 184, 0.35)'}
-            nodeCanvasObject={(node, ctx, globalScale) => {
-              const label = node.id;
-              const fontSize = 12 / globalScale;
-              ctx.beginPath();
-              ctx.fillStyle = node.color;
-              ctx.arc(node.x, node.y, node.val, 0, 2 * Math.PI, false);
-              ctx.fill();
-
-              if (globalScale >= 1.6 || activeNode?.id === node.id) {
-                ctx.font = `${fontSize}px Inter, sans-serif`;
-                ctx.textAlign = 'left';
-                ctx.textBaseline = 'middle';
-                ctx.fillStyle = 'rgba(226, 232, 240, 0.95)';
-                ctx.fillText(label, node.x + node.val + 2, node.y);
-              }
-            }}
-            nodePointerAreaPaint={(node, color, ctx) => {
-              ctx.fillStyle = color;
-              ctx.beginPath();
-              ctx.arc(node.x, node.y, Math.max(8, node.val + 2), 0, 2 * Math.PI, false);
-              ctx.fill();
-            }}
-            onNodeClick={handleNodeClick}
-            onNodeHover={(node) => setActiveNode(node || null)}
-            linkLabel={(link) => `${link.source.id || link.source} - ${link.label} -> ${link.target.id || link.target}`}
+        {!loading && !error && triplets.length > 0 && (
+          <canvas
+            ref={canvasRef}
+            width={600}
+            height={400}
+            style={{ width: '100%', height: '100%', display: 'block' }}
           />
         )}
 
@@ -173,7 +151,7 @@ export default function KnowledgeGraph() {
           </div>
         )}
 
-        {!loading && !error && graphData.nodes.length === 0 && (
+        {!loading && !error && triplets.length === 0 && (
           <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', color: 'var(--text-secondary)', textAlign: 'center', padding: '1rem' }}>
             No graph relationships found yet. Ingest files or URLs first to extract triplets.
           </div>
@@ -181,7 +159,7 @@ export default function KnowledgeGraph() {
       </div>
 
       <div style={{ minHeight: '52px', color: 'var(--text-secondary)', fontSize: '0.88rem' }}>
-        {activeNode ? `Focused node: ${activeNode.id}` : 'Tip: Click a node to zoom and inspect its local neighborhood.'}
+        Tip: Graph shows entity relationships extracted from your documents.
       </div>
     </div>
   );
